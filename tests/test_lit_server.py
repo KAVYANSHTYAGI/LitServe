@@ -31,6 +31,7 @@ from litserve import LitAPI
 from litserve.connector import _Connector
 from litserve.server import LitServer
 from litserve.utils import wrap_litserve_start
+from litserve.specs.base import LitSpec
 
 
 def test_index(sync_testclient):
@@ -699,3 +700,25 @@ async def test_concurrent_async_streaming_inference(num_requests):
             assert elapsed < 4 + 4, (
                 f"Expected all requests to finish in just over 4s, plus some overhead, but took {elapsed:.2f}s."
             )
+
+
+class DummySpec(LitSpec):
+    def __init__(self):
+        super().__init__()
+        self.api_path = "/dummy"
+        self.add_endpoint("/health", self.extra, ["GET"])
+
+    def decode_request(self, request, meta_kwargs=None):
+        pass
+
+    def encode_response(self, output, meta_kwargs=None):
+        pass
+
+    def extra(self):
+        return {}
+
+
+def test_spec_endpoint_path_clash(simple_litapi):
+    spec = DummySpec()
+    with pytest.raises(ValueError, match="already registered"):
+        LitServer(simple_litapi, spec=spec)

@@ -970,13 +970,16 @@ class LitServer:
 
     def _register_spec_endpoints(self, lit_api: LitAPI):
         specs = [lit_api.spec] if lit_api.spec else []
+        existing_paths = {route.path for route in self.app.routes}
         for spec in specs:
             spec: LitSpec
-            # TODO check that path is not clashing
             for path, endpoint, methods in spec.endpoints:
+                if path in existing_paths:
+                    raise ValueError(f"Endpoint path '{path}' is already registered")
                 self.app.add_api_route(
                     path, endpoint=endpoint, methods=methods, dependencies=[Depends(self.setup_auth())]
                 )
+                existing_paths.add(path)
 
     def _register_middleware(self):
         for middleware in self.middlewares:
